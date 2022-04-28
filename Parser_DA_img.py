@@ -16,11 +16,6 @@ cycles = int(1)
 
 searchterm = []
 
-Проверка синхронизации строка 19
-Еще одна проверка
-
-ничего не понимаю
-
 for _ in range(cycles):
     key = input('Type next searchterm: ')
     qty = int(input('How many of them do you want? '))

@@ -10,6 +10,17 @@ alpha_dir = "D:\Pictures"
 header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
 
 
+datas = {
+    'uгsername': 'Zebul',
+    'password': 'sNn@jNQ7Mc4cb7L'
+    }
+# url_login = 'https://www.deviantart.com/users/login'
+
+auth = ('Zebul', 'sNn@jNQ7Mc4cb7L')
+
+url_login = 'https://www.deviantart.com/_sisu/do/signin'
+
+
 
 # cycles = int(input('Type how many searchterms you will use: '))
 cycles = int(1)

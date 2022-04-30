@@ -5,20 +5,23 @@ import os
 import shutil
 
 
+
 start_time = d.datetime.now()
 alpha_dir = "D:\Pictures"
 header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
 
-# не работающий блок авторизации
-datas = {
-    'uгsername': 'Zebul',
-    'password': 'sNn@jNQ7Mc4cb7L'
-    }
-# url_login = 'https://www.deviantart.com/users/login'
 
-auth = ('Zebul', 'sNn@jNQ7Mc4cb7L')
 
-url_login = 'https://www.deviantart.com/_sisu/do/signin'
+# # не работающий блок авторизации
+# datas = {
+#     'username': 'Zebul',
+#     'password': 'sNn@jNQ7Mc4cb7L'
+#     }
+# # url_login = 'https://www.deviantart.com/users/login'
+
+# auth = ('Zebul', 'sNn@jNQ7Mc4cb7L')
+
+# url_login = 'https://www.deviantart.com/_sisu/do/signin'
 
 
 

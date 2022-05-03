@@ -1,3 +1,9 @@
+from selenium import webdriver
+import time
+import pickle
+from selenium.webdriver.common.keys import Keys
+# from Requests_DA_img import *
+
 from bs4 import BeautifulSoup
 import requests
 import datetime as d
@@ -10,20 +16,6 @@ start_time = d.datetime.now()
 alpha_dir = "D:\Pictures"
 header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
 
-
-# cycles = int(input('Type how many searchterms you will use: '))
-
-cycles = int(1)
-
-searchterm = []
-
-for _ in range(cycles):
-    key = input('Type next searchterm: ')
-    qty = int(input('How many of them do you want? '))
-    # key = 'planescape torment'
-    # qty = 1
-    pages = (qty // 23) + 1
-    searchterm.append([key, qty])
 
 # проверяем имя файла
 def check_filename(filename):
@@ -40,10 +32,9 @@ def check_filename(filename):
 
 
 # Основная функция. # Надо бы наверно разделить
-def parse_deviant_art(key, qty):
+def parse_deviant_art(key, qty, img_pages_set):
 
     print()
-    print(f'Analyze {pages} pages by search query {key}...'.format(qty, key))
 
     imgs_path = 'D:\Pictures' + '\\' + key
 
@@ -54,44 +45,14 @@ def parse_deviant_art(key, qty):
         os.chdir(alpha_dir)
         os.mkdir(key)
     
-    # разделяем поисковой запрос если он составной
-    kw_merged = ''
-    for k in key.split(' '):
-        if k != key.split(' ')[-1]:
-            kw_merged += (k + '+')
-        else:
-            kw_merged += k
-
-
-    urls = []
-    for number in [str(o) for o in list(range(1, pages + 1))]:
-        urls.append(r'https://www.deviantart.com/search/deviations?q={0}&page={1}'.format(kw_merged, number))
-    
-    print('Prepairing urls...')
-    images_links = []
-
-    # блок отладки. Вставить сюда страницу с картинкой которая провоцирует ошибку
-    # images_links = ['https://www.deviantart.com/murderousautomaton/art/Prey-133061554']
-    
-    for url in urls:
-        response = requests.Session()
-        response = response.get(url, headers=header)
-        soup = BeautifulSoup(response.text, 'html5lib')
-        for s in soup.body.find_all('a'):
-            if str(s).startswith('<a data-hook="deviation_link"'):
-                # # print(img_links)
-                images_links.append(s.get('href'))
-    print(*images_links, sep = '\n')
-    print(f' Parsing {len(images_links)} img pages')
-    response.close()
-        
+       
     print('Downloading...')
 
     os.system(r"explorer.exe" + " " + imgs_path)
 
     counter = 0
 
-    for img_page in images_links:
+    for img_page in img_pages_set:
         print(f'Saving image from page - {img_page}')
         response = requests.Session()
         response = response.get(img_page, headers=header)
@@ -135,6 +96,98 @@ def parse_deviant_art(key, qty):
     print(" Script running time " + str(d.datetime.now() - start_time)[:8])
 
 
-# Старт программы с указанием количества циклов
-for key, qty in searchterm:
-    parse_deviant_art(key, qty)
+
+
+
+
+
+user_agent_list = [
+    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36',
+    'Chrome/101.0.4951.41'
+]
+
+# options
+options = webdriver.ChromeOptions()
+# options.add_argument(f'user-agent={random.choice(user_agent_list)}')
+options.add_argument(f'user-agent={user_agent_list[0]}')
+
+
+# disable webdrivermode
+options.add_argument('--disable-blink-features=AutomationControlled')
+
+# работа в фоне
+# options.add_argument('--headless')
+
+
+url = 'https://www.deviantart.com/search/deviations?q=gb62da&page=1'
+# url = f'https://www.deviantart.com/search/deviations?q=planescape&page=1'
+url_login = 'https://www.deviantart.com/users/login'
+driver = webdriver.Chrome(
+    executable_path=r'D:\OneDrive\Synh\Code\Python\My_projects\arcadia\Selenium\chromedriver.exe',
+    options=options
+    )
+
+# auth block
+username = 'Zebul'
+password = 'sNn@jNQ7Mc4cb7L'
+
+img_pages = []
+
+def scroll_pages(cycles):
+    for _ in range(cycles):
+
+        pass_input = driver.find_element_by_tag_name('body')
+        pass_input.send_keys(Keys.END)
+        time.sleep(2)
+
+        items = driver.find_elements_by_xpath('//a[@data-hook="deviation_link"]')
+        for item in items:
+            img_pages.append(item.get_attribute('href'))
+        print(f'Количество элементов в списке {len(img_pages)}')
+
+    return img_pages
+
+
+try:
+
+    # заходим с уже заготовленными куками
+    driver.get(url)
+    time.sleep(2)
+
+    for cookie in pickle.load(open(f'{username}_cookies', "rb")):
+        driver.add_cookie(cookie)
+
+    time.sleep(2)
+    driver.refresh()
+
+
+    # items = driver.find_elements_by_xpath('//a[@data-hook="deviation_link"]')
+    # img_pages = []
+    # for item in items:
+    #     img_pages.append(item.get_attribute('href'))
+    # print(f'Количество элементов в списке {len(img_pages)}')
+    # img_pages_set = set(img_pages)
+    #     # print(f"Ты ищешь страницу {item.get_attribute('href')}")
+    # print(*img_pages_set, sep = '\n')
+    # print(f'Количество элементов множества {len(img_pages_set)}')
+
+    time.sleep(2)
+    img_pages_set = set(scroll_pages(10))
+    print(*img_pages_set, sep = '\n')
+    print(f'Количество элементов множества {len(img_pages_set)}')
+
+
+
+    key = 'gb62da'
+    qty = 20
+
+    parse_deviant_art(key, qty, img_pages_set)
+
+
+except Exception as ex:
+    print(ex)
+finally:
+    driver.close()
+    driver.quit()
+
+

@@ -3,6 +3,7 @@ import requests
 import datetime as d
 import os
 import shutil
+from selenium_parse import key, qty, img_pages_set
 
 
 
@@ -11,19 +12,6 @@ alpha_dir = "D:\Pictures"
 header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
 
 
-# cycles = int(input('Type how many searchterms you will use: '))
-
-cycles = int(1)
-
-searchterm = []
-
-for _ in range(cycles):
-    key = input('Type next searchterm: ')
-    qty = int(input('How many of them do you want? '))
-    # key = 'planescape torment'
-    # qty = 1
-    pages = (qty // 23) + 1
-    searchterm.append([key, qty])
 
 # проверяем имя файла
 def check_filename(filename):
@@ -43,7 +31,6 @@ def check_filename(filename):
 def parse_deviant_art(key, qty):
 
     print()
-    print(f'Analyze {pages} pages by search query {key}...'.format(qty, key))
 
     imgs_path = 'D:\Pictures' + '\\' + key
 
@@ -54,44 +41,14 @@ def parse_deviant_art(key, qty):
         os.chdir(alpha_dir)
         os.mkdir(key)
     
-    # разделяем поисковой запрос если он составной
-    kw_merged = ''
-    for k in key.split(' '):
-        if k != key.split(' ')[-1]:
-            kw_merged += (k + '+')
-        else:
-            kw_merged += k
-
-
-    urls = []
-    for number in [str(o) for o in list(range(1, pages + 1))]:
-        urls.append(r'https://www.deviantart.com/search/deviations?q={0}&page={1}'.format(kw_merged, number))
-    
-    print('Prepairing urls...')
-    images_links = []
-
-    # блок отладки. Вставить сюда страницу с картинкой которая провоцирует ошибку
-    # images_links = ['https://www.deviantart.com/murderousautomaton/art/Prey-133061554']
-    
-    for url in urls:
-        response = requests.Session()
-        response = response.get(url, headers=header)
-        soup = BeautifulSoup(response.text, 'html5lib')
-        for s in soup.body.find_all('a'):
-            if str(s).startswith('<a data-hook="deviation_link"'):
-                # # print(img_links)
-                images_links.append(s.get('href'))
-    print(*images_links, sep = '\n')
-    print(f' Parsing {len(images_links)} img pages')
-    response.close()
-        
+       
     print('Downloading...')
 
     os.system(r"explorer.exe" + " " + imgs_path)
 
     counter = 0
 
-    for img_page in images_links:
+    for img_page in img_pages_set:
         print(f'Saving image from page - {img_page}')
         response = requests.Session()
         response = response.get(img_page, headers=header)
@@ -136,5 +93,9 @@ def parse_deviant_art(key, qty):
 
 
 # Старт программы с указанием количества циклов
-for key, qty in searchterm:
-    parse_deviant_art(key, qty)
+# for key, qty in searchterm:
+#     parse_deviant_art(key, qty)
+
+
+if __name__ == "__main__":
+    parse_deviant_art(key, qty, img_pages_set)

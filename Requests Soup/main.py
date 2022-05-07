@@ -24,9 +24,9 @@ header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KH
 # inputs = soup.find_all('input', name = True, value = True)
 
 
-r = session.get(url_login, headers=header)
-r.html.render()
-print(r.html.text)
+# r = session.get(url_login, headers=header)
+# r.html.render()
+# print(r.html.text)
 
 # token = []
 

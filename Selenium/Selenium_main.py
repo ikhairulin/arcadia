@@ -8,7 +8,7 @@ import requests
 import shutil
 from bs4 import BeautifulSoup
 import datetime as d
-
+import random
 
 start_time = d.datetime.now()
 
@@ -27,6 +27,7 @@ options.add_argument(f'user-agent={user_agent}')
 
 # disable webdrivermode
 options.add_argument('--disable-blink-features=AutomationControlled')
+options.add_argument("--start-maximized")
 
 # работа в фоне
 # options.add_argument('--headless')
@@ -51,22 +52,22 @@ key = 'gb62da'
 
 # Запрос количества скачиваемых картиночек
 # qty = input('How many of img need to download?   ')
-qty = 100
+qty = 50
 
 imgs_path = 'D:\Pictures' + '\\' + key
 
-# # проверяем имя файла
-# def check_filename(filename):
-#     for i in list(filename):
-#         if str(i) in "/\\:;*?<>|":
-#             new_name = ''
-#             for k in range(len(filename)):
-#                 if filename[k] in "/\\:;*?<>|":
-#                     continue
-#                 else:
-#                     new_name += filename[k]
-#             filename = new_name
-#     return filename
+# проверяем имя файла
+def check_filename(filename):
+    for i in list(filename):
+        if str(i) in "/\\:;*?<>|":
+            new_name = ''
+            for k in range(len(filename)):
+                if filename[k] in "/\\:;*?<>|":
+                    continue
+                else:
+                    new_name += filename[k]
+            filename = new_name
+    return filename
 
 def prepare_link(string):
 
@@ -80,20 +81,21 @@ def prepare_link(string):
 
 # Скроллим поисковую выдачу и собираем в список ссылки на страницы с картинками
 def scroll_pages(cycles):
+    counter = 0
     for _ in range(cycles):
-
+        counter += 1
         pass_input = driver.find_element_by_tag_name('body')
         pass_input.send_keys(Keys.END)
-        time.sleep(2)
-
+        time.sleep(1)
         items = driver.find_elements_by_xpath('//a[contains(@data-hook,"deviation_link")]')
         for item in items:
             img_pages.append(item.get_attribute('href'))
-        print(f'Количество проанализированных ссылок {len(img_pages)}')
+        print(f'{counter}. Количество проанализированных ссылок {len(img_pages)}')
+    time.sleep(3)
     return img_pages
 
 
-# Сам скачивающий скрипт по заданному списку
+# Сам скрипт скачивающий по заданному списку
 def download_img(images_links):
 
     print('Downloading...')
@@ -108,72 +110,84 @@ def download_img(images_links):
     os.system(r"explorer.exe" + " " + imgs_path)
 
     counter = 0
+    bad_list =[]
+    global forbidden_list
+    forbidden_list = []
 
-    for img_page in images_links:
-        print(f'Saving image from page - {img_page}')
+    file = open(r'D:\OneDrive\Synh\Code\Python\My_projects\arcadia\Selenium\list.txt', encoding = 'utf-8')
+    for img_page in file:
+    # for img_page in images_links:
+        counter += 1
+        time.sleep(random.randint(0, 2))
+        print(f'{counter}. Saving image from page - {img_page}')
         response = requests.Session()
         response = response.get(img_page, headers=header)
         soup = BeautifulSoup(response.text, 'html5lib')
-        item = soup.find('div', class_ = '_2Py-J _287EP').get('style')
+        try:
+            item = soup.find('div', class_ = '_2Py-J _287EP').get('style')
+            img_params = prepare_link(item)
+        except AttributeError:
+            print(f'Error on page - {img_page}')
+            bad_list.append(img_page)
+            continue
 
     # ошибка срабатывает если на странице видео вместо картинки
-        img_params = prepare_link(item)
+
         try:
             img_name = img_params[1]
             img_link = img_params[0]
         except IndexError:
              continue
 
-    # Блок отладки. Debug block
-        # print(items)
-        # print()
-        # print(*items, sep = "\n")
-        # print(img_name, img_link, sep = "\n")
+        response = requests.get(img_link, stream=True, headers=header)
+        img_path = alpha_dir + '/%s' % key + '/' + img_name + '.jpg'
+        with open(img_path, "wb") as f:
+            response.decode_content = True
+            shutil.copyfileobj(response.raw, f)
+            file_stats = os.stat(img_path)
+            if int(file_stats.st_size) < 1024:
+                print(f"Can't reach the file on page - {img_page}. Server don't response")
+                forbidden_list.append(img_page)
+        del response
+
+# блок для необработанных первой волной ссылок. ИСПРАВИТЬ!!
+    sec_counter = 0
+    for img_page in bad_list:
+        sec_counter += 1
+        time.sleep(random.randint(0, 1))
+        print(f'{sec_counter}. Saving image from page - {img_page}')
+        response = requests.Session()
+        response = response.get(img_page, headers=header)
+        soup = BeautifulSoup(response.text, 'html5lib')
+        items = soup.find_all('img', loading = False, srcset= False, title = False, style = False, height= False)
+        items = str(items).split('"')
+
+        try:
+            img_name = items[1]
+            img_link = items[-2]
+        except IndexError:
+            continue
+        else: 
+            img_name = check_filename(img_name)
 
         response = requests.get(img_link, stream=True, headers=header)
         img_path = alpha_dir + '/%s' % key + '/' + img_name + '.jpg'
         with open(img_path, "wb") as f:
             response.decode_content = True
             shutil.copyfileobj(response.raw, f)
-        counter += 1
         del response
+
     
-    print(f' Downloaded {counter} files by search query - {key}')
+    
+    print(f' Downloaded {counter + sec_counter} files by search query - {key}')
     print(f' Script finished. Files in a folder ->  {imgs_path}')
     print(" Script running time " + str(d.datetime.now() - start_time)[:8])
 
-
-
-def login_in(url, username, password):
-    try:
-        # авторизуемся и получаем куки
-        driver.get(url)
-        time.sleep(3)
-
-        print('Проходим идентификацию...')
-        email_input = driver.find_element_by_id('username')
-        email_input.clear()
-        email_input.send_keys(username)
-
-        pass_input = driver.find_element_by_id('password')
-        pass_input.clear()
-        pass_input.send_keys(password)
-        time.sleep(2)
-
-        pass_input.send_keys(Keys.ENTER)
-
-        # login_button = driver.find_element_by_id('loginbutton').click()
-        time.sleep(3)
-
-        # сохраняем cookies в файл
-        pickle.dump(driver.get_cookies(),open(f"{username}_cookies", "wb"))
-        time.sleep(3)
-
-    except Exception as ex:
-        print(ex)
-    finally:
-        driver.close()
-        # driver.quit()
+    forbid_text = open(imgs_path + '\\' + 'forbidden_list.txt', 'w', encoding='UTF-8')
+        for row in forbidden_list:
+            forbid_text.write(row)
+            forbid_text.write('\n')
+        forbid_text.close
 
 
 def parse_links(key, qty):
@@ -199,7 +213,7 @@ def parse_links(key, qty):
         driver.refresh()
 
         # time.sleep(10)
-        scrolls = qty / 23
+        scrolls = int(qty / 34)
         # scrolls = 1
      
 
@@ -209,7 +223,15 @@ def parse_links(key, qty):
         print(f'Количество уникальных ссылок {len(img_pages_set)}')
         global img_pages_list
         img_pages_list = list(img_pages_set)
+        # img_pages_list.sort()
         time.sleep(3)
+
+        text = open(imgs_path + '\\' + 'list.txt', 'w', encoding='UTF-8')
+        for name in img_pages_list:
+            text.write(name)
+            text.write('\n')
+        text.close
+
 
     except Exception as ex:
         print(ex)
@@ -217,9 +239,6 @@ def parse_links(key, qty):
         driver.close()
         # driver.quit()
 
-
-
-login_in(url_login, username, password)
 
 parse_links(key, qty)
 

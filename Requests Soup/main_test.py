@@ -3,16 +3,17 @@ import requests
 import datetime as d
 import os
 import shutil
+import imghdr
 
 
 start_time = d.datetime.now()
 alpha_dir = "D:\Pictures"
 header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
 
-img_page = 'https://www.deviantart.com/gb62da/art/Sometimes-I-m-in-a-mood-859271106'
+img_page = 'https://www.deviantart.com/gb62da/art/Sweet-Home-ala-Dana-2-753657901'
 # img_page = 'index.html'
 
-key = 'gb62da'
+key = 'gb62da2'
 
 
 def prepare_link(string):
@@ -54,8 +55,8 @@ items = soup.find('div', class_ = '_2Py-J _287EP').get('style')
 #    f.write(response.text)
 
 # Блок отладки. Debug block
-print(items)
-print()
+# print(items)
+# print()
 # print(*items, sep = "\n")
 
 
@@ -63,6 +64,7 @@ img_params = prepare_link(items)
 
 img_name = img_params[1]
 img_link = img_params[0]
+# print(img_link)
 
 
 # # Блок отладки. Debug block
@@ -76,6 +78,10 @@ img_path = alpha_dir + '/%s' % key + '/' + img_name + '.jpg'
 with open(img_path, "wb") as f:
     response.decode_content = True
     shutil.copyfileobj(response.raw, f)
+    file_stats = os.stat(img_path)
+    if int(file_stats.st_size) < 1024:
+        print("Косяк")
+    print(file_stats.st_size)
 counter += 1
 del response
 

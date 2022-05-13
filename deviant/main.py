@@ -1,112 +1,57 @@
-from selenium import webdriver
-import time
-import pickle
-from selenium.webdriver.common.keys import Keys
-
+"""Парсер DeviantArt.com"""
+from bs4 import BeautifulSoup
 import requests
-import shutil
+import time
+import re
+from random import randint
+import os, shutil
+import datetime as d
+from data.config import username, password, alpha_dir, key, qty
+
+# Технический блок
+header = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36"}
+alpha_dir = alpha_dir # материнская папка для сохранения файлов
+start_time = d.datetime.now() # замеряем время для подсчета работы цикла
+url = 'https://www.deviantart.com/'
+url_login = 'https://www.deviantart.com/_sisu/do/signin'
+
+key = key
+qty = qty
+pages = (qty // 23) + 1
 
 
-alpha_dir = "D:\\"
-header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
+def start_session():
+    # Создаем сессию
+    global S
+    with requests.Session() as S:
+        S.headers.update(header)
+        S.headers.update({'Referer':url_login}) # Понять как это работает
 
-user_agent_list = [
-    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36',
-    'Chrome/101.0.4951.41'
-]
+    fake_user_activity = S.get(url, headers=header)
+    print(f'Start script...')
+    time.sleep(randint(0, 3))
+    response = S.get(url_login, headers=header)
+    soup = BeautifulSoup(response.text, 'lxml')
+    token = soup.select('input[name="csrf_token"]')
 
-# options
-options = webdriver.ChromeOptions()
-# options.add_argument(f'user-agent={random.choice(user_agent_list)}')
-options.add_argument(f'user-agent={user_agent_list[0]}')
+    datas = {
+        'referer': 'https://www.deviantart.com/',
+        'csrf_token': extract_token(str(token)),
+        'challenge': '0',
+        'username': username,
+        'password': password,
+        'remember': 'on'
+        }
 
+    auth = S.post(url_login, headers=header, data=datas, allow_redirects = True)
+    time.sleep(randint(0, 5))
+    print(f'Connecting to site... Response code - {auth.status_code}')
 
-# disable webdrivermode
-options.add_argument('--disable-blink-features=AutomationControlled')
+def parse_deviant_art(key, pages, S):
+    # Основная функция. # Надо бы наверно разделить
+    print(f'Analyze {pages} pages by search query {key}...')
 
-# работа в фоне
-# options.add_argument('--headless')
-
-
-url_login = 'https://www.deviantart.com/users/login'
-
-# Адрес скачанного Chromedriver
-driver = webdriver.Chrome(
-    executable_path=r'D:\OneDrive\Synh\Code\Python\My_projects\arcadia\Selenium\chromedriver.exe',
-    options=options
-    )
-
-# auth block
-username = 'Zebul'
-password = 'sNn@jNQ7Mc4cb7L'
-
-img_pages = []
-
-# Ввод поискового ключа для сбора ссылок
-# key = input('Type a search term   ')
-key = 'gb62da'
-
-# Запрос количества скачиваемых картиночек
-# qty = input('How many of img need to download?   ')
-qty = 100
-
-# Скроллим поисковую выдачу и собираем в список ссылки на страницы с картинками
-def scroll_pages(cycles):
-    for _ in range(cycles):
-
-        pass_input = driver.find_element_by_tag_name('body')
-        pass_input.send_keys(Keys.END)
-        time.sleep(2)
-
-        items = driver.find_elements_by_xpath('//a[contains(@data-hook,"deviation_link")]')
-        for item in items:
-            img_pages.append(item.get_attribute('href'))
-        print(f'Количество элементов в списке {len(img_pages)}')
-
-    return img_pages
-
-
-try:
-    # авторизуемся и получаем куки
-
-    driver.get(url_login)
-    time.sleep(3)
-
-    print('Проходим идентификацию...')
-    email_input = driver.find_element_by_id('username')
-    email_input.clear()
-    email_input.send_keys(username)
-
-    pass_input = driver.find_element_by_id('password')
-    pass_input.clear()
-    pass_input.send_keys(password)
-    time.sleep(2)
-
-    pass_input.send_keys(Keys.ENTER)
-
-    # login_button = driver.find_element_by_id('loginbutton').click()
-    time.sleep(3)
-
-    # сохраняем cookies в файл
-    pickle.dump(driver.get_cookies(),open(f"{username}_cookies", "wb"))
-    time.sleep(3)
-
-
-
-except Exception as ex:
-    print(ex)
-finally:
-    driver.close()
-    driver.quit()
-
-
-
-
-
-
-
-def parse_links(key, qty, img_pages_set):
-
+    # разделяем поисковой запрос если он составной
     kw_merged = ''
     for k in key.split(' '):
         if k != key.split(' ')[-1]:
@@ -114,38 +59,132 @@ def parse_links(key, qty, img_pages_set):
         else:
             kw_merged += k
 
-    url = f'https://www.deviantart.com/search/deviations?q={kw_merged}&page=1'
+    urls = []
+    for number in [str(page) for page in list(range(1, pages + 1))]:
+        urls.append(r'https://www.deviantart.com/search/deviations?q={0}&page={1}'.format(kw_merged, number))
 
-    try:
-        # заходим с уже заготовленными куками
-        driver.get(url)
-        time.sleep(2)
+    print('Prepairing urls...')
+    images_links = []
 
-        for cookie in pickle.load(open(f'{username}_cookies', "rb")):
-            driver.add_cookie(cookie)
+    # блок отладки. Вставить сюда страницу с картинкой которая провоцирует ошибку
+    # images_links = ['https://www.deviantart.com/murderousautomaton/art/Prey-133061554']
 
-        time.sleep(2)
-        driver.refresh()
-
-        # time.sleep(10)
-        scrolls = qty / 23
-        # scrolls = 1
-        
-
-        time.sleep(2)
-        img_pages_set = set(scroll_pages(scrolls))
-        # print(*img_pages_set, sep = '\n')
-        print(f'Количество элементов множества {len(img_pages_set)}')
-        global img_pages_list
-        img_pages_list = list(img_pages_set)
-        time.sleep(3)
-
-    except Exception as ex:
-        print(ex)
-    finally:
-        driver.close()
-        driver.quit()
-
-parse_links(key, qty, img_pages_list)
+    for url in urls:
+        response = S.get(url)
+        soup = BeautifulSoup(response.text, 'html5lib')
+        for row in soup.body.find_all('a'):
+            if str(row).startswith('<a data-hook="deviation_link"'):
+                img_page = row.get('href')
+                # images_links.append(row.get('href'))
+                images_links.append(img_page)
+                with open(alpha_dir + '\\' + key + '\\' + 'url_pages_list.txt', 'a', encoding='UTF-8') as urls_text:
+                    urls_text.write(img_page)
+                    urls_text.write('\n')
 
 
+    print(f'Parsing {len(images_links)} img pages')
+    response.close()
+
+    print('Downloading...')
+
+    os.system(r"explorer.exe" + " " + imgs_path)
+
+    counter = 0
+
+    for img_page in images_links:
+        time.sleep(randint(0, 2))
+        counter += 1
+        print(f'{counter}. Saving image from page - {img_page}')
+        response = S.get(img_page, headers=header)
+        soup = BeautifulSoup(response.text, 'html5lib')
+        items = soup.find_all('img', loading = False, srcset= False, title = False, style = False, height= False)
+        items = str(items).split('"')
+
+        try:    # ошибка срабатывает если на странице видео вместо картинки
+            img_name = items[1]
+            img_link = items[-2]
+        except IndexError:
+            continue
+        else:
+            img_name = check_filename(img_name)
+
+        response = S.get(img_link, stream=True, headers=header)
+        try:
+            save_path = imgs_path + '\\' + img_name + '.jpg'
+            with open(save_path, "wb") as f:
+                response.decode_content = True
+                shutil.copyfileobj(response.raw, f)
+        except OSError:
+            img_name = check_filename(img_name)
+            save_path = imgs_path + '\\' + img_name + '.jpg'
+            with open(save_path, "wb") as f:
+                response.decode_content = True
+                shutil.copyfileobj(response.raw, f)
+
+        finally:
+            with open(alpha_dir + '\\' + key + '\\' + 'saved_list.txt', 'a', encoding='UTF-8') as saved_text:
+                saved_text.write(img_page)
+                saved_text.write('\n')
+            del response
+
+        if qty - counter == 0:
+            break
+
+    print(f'Downloaded {counter} files by search query - {key}')
+    print(f'Script finished. Files in a folder ->  {imgs_path}')
+    print("Script running time " + str(d.datetime.now() - start_time)[:8])
+
+
+def extract_token(string):
+    # вытаскиваем из строки html значение токена авторизации с помощью регулярки
+    text = re.search(r'value=\".*?\"', string)
+    result = str(text[0])[7:-1]
+    return result
+
+
+def prepare_link(string):
+    # вытаскиваем из строки html ссылку и имя файла
+    first_letter = string.find("url('")
+    pre_link = string[first_letter + 5:-2]
+    file_name = string[string.find("strp/") + 5 : string.find('-150.jpg')]
+    link = pre_link[: pre_link.find(".jpg") + 4] + pre_link[pre_link.rfind(".jpg?") + 4 :]
+    return (link, file_name)
+
+
+def check_filename(filename):
+    # проверяем имя файла на наличие недопустимых для Windows символов
+    for i in list(filename):
+        if str(i) in "/\\:;*?<>|":
+            new_name = ''
+            for k in range(len(filename)):
+                if filename[k] in "/\\:;*?<>|":
+                    continue
+                else:
+                    new_name += filename[k]
+            filename = new_name
+    return filename
+
+def make_dirs():
+    # создаем путь к рабочей папке
+    if not os.path.exists(alpha_dir):
+        os.mkdir(alpha_dir)
+
+    if not os.path.exists(alpha_dir + '\\' + key):
+        os.chdir(alpha_dir)
+        os.mkdir(key)
+
+    if not os.path.exists(alpha_dir + '\\' + key + '\\' + 'images'):
+        os.chdir(alpha_dir + '\\' + key)
+        os.mkdir('images')
+
+
+if __name__ == "__main__":
+
+    imgs_path = 'D:\Pictures' + '\\' + key + '\\' + 'images'
+
+    if not os.path.exists(imgs_path):
+        make_dirs()
+
+    start_session()
+
+    parse_deviant_art(key, pages, S)

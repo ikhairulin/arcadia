@@ -11,5 +11,5 @@ alpha_dir = "D:\Pictures"
 # Формула расчета (qty // 23) + 1
 
 
-key = 'gb62da' # Указываем так же в кавычках. Можно несколько слов, например 'planescape torment'
+key = 'planescape torment' # Указываем так же в кавычках. Можно несколько слов, например 'planescape torment'
 qty = 5

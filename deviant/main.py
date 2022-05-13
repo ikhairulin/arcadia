@@ -1,4 +1,8 @@
-"""Парсер DeviantArt.com"""
+"""
+Парсер DeviantArt.com
+если авторизация не пройдет успешно поисковая выдача будет иная, но скрипт отработает
+"""
+
 from bs4 import BeautifulSoup
 import requests
 import time
@@ -43,12 +47,21 @@ def start_session():
         'remember': 'on'
         }
 
+    time.sleep(randint(0, 2))
     auth = S.post(url_login, headers=header, data=datas, allow_redirects = True)
-    time.sleep(randint(0, 5))
+
+    fake_user_activity = S.get(url, headers=header)
+    if check_auth(fake_user_activity, username):
+        print("Authorization successfully passed")
+    else:
+        print("Authorization NOT successfull")
     print(f'Connecting to site... Response code - {auth.status_code}')
 
-def parse_deviant_art(key, pages, S):
+
+
+def parse_deviant_links(key, pages, S):
     # Основная функция. # Надо бы наверно разделить
+
     print(f'Analyze {pages} pages by search query {key}...')
 
     # разделяем поисковой запрос если он составной
@@ -81,10 +94,13 @@ def parse_deviant_art(key, pages, S):
                     urls_text.write(img_page)
                     urls_text.write('\n')
 
-
     print(f'Parsing {len(images_links)} img pages')
     response.close()
 
+    return images_links
+
+
+def save_images(images_links):
     print('Downloading...')
 
     os.system(r"explorer.exe" + " " + imgs_path)
@@ -141,14 +157,15 @@ def extract_token(string):
     result = str(text[0])[7:-1]
     return result
 
-
-def prepare_link(string):
-    # вытаскиваем из строки html ссылку и имя файла
-    first_letter = string.find("url('")
-    pre_link = string[first_letter + 5:-2]
-    file_name = string[string.find("strp/") + 5 : string.find('-150.jpg')]
-    link = pre_link[: pre_link.find(".jpg") + 4] + pre_link[pre_link.rfind(".jpg?") + 4 :]
-    return (link, file_name)
+def check_auth(auth, username):
+    soup = BeautifulSoup(auth.text, 'html5lib')
+    for row in soup.header.find_all('a'):
+        # print(str(row))
+        if str(row).startswith('<a class="user-link _1Zf8w _2dNZp" data-hook="user_link"'):
+            print(str(row))
+            usr_nme = row.get('data-username')
+            if usr_nme == username:
+                return True
 
 
 def check_filename(filename):
@@ -178,6 +195,8 @@ def make_dirs():
         os.mkdir('images')
 
 
+
+
 if __name__ == "__main__":
 
     imgs_path = 'D:\Pictures' + '\\' + key + '\\' + 'images'
@@ -187,4 +206,9 @@ if __name__ == "__main__":
 
     start_session()
 
-    parse_deviant_art(key, pages, S)
+    dev_links = parse_deviant_links(key, pages, S)
+
+    if len(dev_links) > 0:
+        save_images(dev_links)
+    else:
+        print(f'Nothing was found for your search query - {key}')

@@ -1,7 +1,7 @@
 """Параметры для работы парсера"""
 
 username = 'Zebul'
-password = 'sNn@jNQ7Mc4cb7L'
+password = 'sNn@jNQ7Mc'
 
 # Материнская папка где будут созданы поддиректории с поисковыми запросами и скачанными файлами
 alpha_dir = "D:\Pictures"

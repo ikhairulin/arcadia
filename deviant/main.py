@@ -10,7 +10,7 @@ import re
 from random import randint
 import os, shutil
 import datetime as d
-from data.config import username, password, alpha_dir, key, qty
+from data.config import username, password, alpha_dir, key, qty, parametr, direct_url
 
 # Технический блок
 header = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36"}
@@ -59,22 +59,37 @@ def start_session():
 
 
 
-def parse_deviant_links(key, pages, S):
+def parse_deviant_links(key, pages, parametr, link, S):
     # Основная функция. # Надо бы наверно разделить
 
     print(f'Analyze {pages} pages by search query {key}...')
 
-    # разделяем поисковой запрос если он составной
-    kw_merged = ''
-    for k in key.split(' '):
-        if k != key.split(' ')[-1]:
-            kw_merged += (k + '+')
-        else:
-            kw_merged += k
-
     urls = []
-    for number in [str(page) for page in list(range(1, pages + 1))]:
-        urls.append(r'https://www.deviantart.com/search/deviations?q={0}&page={1}'.format(kw_merged, number))
+
+    if parametr == 'search':
+
+        # разделяем поисковой запрос если он составной
+        kw_merged = ''
+        for k in key.split(' '):
+            if k != key.split(' ')[-1]:
+                kw_merged += (k + '+')
+            else:
+                kw_merged += k
+
+        for number in [str(page) for page in list(range(1, pages + 1))]:
+            urls.append(r'https://www.deviantart.com/search/deviations?q={0}&page={1}'.format(kw_merged, number))
+
+    if parametr == 'all_gallery':
+        for number in [str(page) for page in list(range(1, pages + 1))]:
+            urls.append(r'https://www.deviantart.com/{0}/gallery/all?page={1}'.format(key, number))
+
+    if parametr == 'favs':
+        for number in [str(page) for page in list(range(1, pages + 1))]:
+            urls.append(r'https://www.deviantart.com/{0}/favourites/all?page={1}'.format(key, number))
+
+    if parametr == 'link':
+        for number in [str(page) for page in list(range(1, pages + 1))]:
+            urls.append(r'{0}&page={1}'.format(link, number))
 
     print('Prepairing urls...')
     images_links = []
@@ -160,9 +175,7 @@ def extract_token(string):
 def check_auth(auth, username):
     soup = BeautifulSoup(auth.text, 'html5lib')
     for row in soup.header.find_all('a'):
-        # print(str(row))
         if str(row).startswith('<a class="user-link _1Zf8w _2dNZp" data-hook="user_link"'):
-            print(str(row))
             usr_nme = row.get('data-username')
             if usr_nme == username:
                 return True
@@ -206,7 +219,7 @@ if __name__ == "__main__":
 
     start_session()
 
-    dev_links = parse_deviant_links(key, pages, S)
+    dev_links = parse_deviant_links(key, pages, parametr, direct_url, S)
 
     if len(dev_links) > 0:
         save_images(dev_links)

@@ -114,6 +114,26 @@ def parse_deviant_links(key, pages, parametr, link, S):
 
     return images_links
 
+def continue_save(urls_txt ,saved_txt):
+    # функция для продолжения закачки, принимает список ссылок на скачку сравнивает со спсоком уже сохраненных и возвращает разницу
+    link_list = []
+    saved_list = []
+    # подгружаем в массив ссылки с файла
+    with open(urls_txt, encoding = 'utf-8') as link_file:
+
+        for link_row in link_file:
+            link_list.append(link_row)
+    try:
+        with open(saved_txt, encoding = 'utf-8') as saved_file:
+            for saved_row in saved_file:
+                saved_list.append(saved_row)
+    except FileNotFoundError:
+        saved_list = []
+
+    images_links = list(set(link_list).difference(set(saved_list)))
+    return images_links
+
+
 
 def save_images(images_links):
     print('Downloading...')
@@ -219,7 +239,12 @@ if __name__ == "__main__":
 
     start_session()
 
-    dev_links = parse_deviant_links(key, pages, parametr, direct_url, S)
+    # dev_links = parse_deviant_links(key, pages, parametr, direct_url, S)
+
+
+    url_list_txt = 'D:\\Pictures\\2022-05-08_gb62da_pages_list.txt'
+    saved_list_txt = ''
+    dev_links = continue_save(url_list_txt, saved_list_txt)
 
     if len(dev_links) > 0:
         save_images(dev_links)

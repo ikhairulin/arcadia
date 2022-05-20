@@ -1,7 +1,7 @@
 """Параметры для работы парсера"""
 
 """Поисковой запрос и ориентировочное количество скачиваемых файлов."""
-key = 'gb62da'
+key = 'Sun'
 
 """Указываем так же в кавычках. Можно несколько слов, например 'planescape torment'"""
 qty = 1000
@@ -21,7 +21,7 @@ password = ''
 """
 alpha_dir = "D:\Pictures"
 
-parametr = 'link'
+
 
 """ Параметры скачивания:
 1. 'search' - обычный режим, сохраняются все картинки из поисковой выдачи сайта по ключевому слову key
@@ -29,5 +29,5 @@ parametr = 'link'
 3. 'favs' - подборка из папки Favorites автора под именем key
 4. 'link' - парсится отдельная подборка автора по ссылке. Например https://www.deviantart.com/jpryno/gallery/73050711/traditional-art. Записывается в direct_url
 """
-
+parametr = 'link'
 direct_url = 'https://www.deviantart.com/jambe/favourites/1894595/photo-favs'

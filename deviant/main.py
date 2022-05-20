@@ -2,7 +2,6 @@
 Парсер DeviantArt.com
 если авторизация не пройдет успешно поисковая выдача будет иная, но скрипт отработает
 """
-
 from bs4 import BeautifulSoup
 import requests
 import time
@@ -11,6 +10,7 @@ from random import randint
 import os, shutil
 import datetime as d
 from data.config import username, password, alpha_dir, key, qty, parametr, direct_url
+
 
 # Технический блок
 header = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36"}
@@ -24,8 +24,11 @@ qty = qty
 pages = (qty // 23) + 1
 
 
+
 def start_session():
-    # Создаем сессию
+    """
+    Создаем сессию для авторизации и работы
+    """
     global S
     with requests.Session() as S:
         S.headers.update(header)
@@ -60,7 +63,19 @@ def start_session():
 
 
 def parse_deviant_links(key, pages, parametr, link, S):
-    # Основная функция. # Надо бы наверно разделить
+    """
+    Функция собирает ссылки на страницах, перескакивая по ним, используя параметр page
+    Параметры скачивания:
+    1. 'search' - обычный режим, сохраняются все картинки из поисковой выдачи сайта по ключевому слову key
+
+    2. 'all' - скачать все работы одного автора, необходимо указать в графе key имя автора из профиля,
+    например по ссылке https://www.deviantart.com/jpryno будет 'jpryno'
+
+    3. 'favs' - подборка из папки Favorites автора под именем key
+
+    4. 'link' - парсится отдельная подборка автора по ссылке.
+    Например https://www.deviantart.com/jpryno/gallery/73050711/traditional-art. Записывается в direct_url
+    """
 
     print(f'Analyze {pages} pages by search query {key}...')
 
@@ -79,7 +94,7 @@ def parse_deviant_links(key, pages, parametr, link, S):
         for number in [str(page) for page in list(range(1, pages + 1))]:
             urls.append(r'https://www.deviantart.com/search/deviations?q={0}&page={1}'.format(kw_merged, number))
 
-    if parametr == 'all_gallery':
+    if parametr == 'all':
         for number in [str(page) for page in list(range(1, pages + 1))]:
             urls.append(r'https://www.deviantart.com/{0}/gallery/all?page={1}'.format(key, number))
 
@@ -103,7 +118,6 @@ def parse_deviant_links(key, pages, parametr, link, S):
         for row in soup.body.find_all('a'):
             if str(row).startswith('<a data-hook="deviation_link"'):
                 img_page = row.get('href')
-                # images_links.append(row.get('href'))
                 images_links.append(img_page)
                 with open(alpha_dir + '\\' + key + '\\' + 'url_pages_list.txt', 'a', encoding='UTF-8') as urls_text:
                     urls_text.write(img_page)
@@ -115,7 +129,9 @@ def parse_deviant_links(key, pages, parametr, link, S):
     return images_links
 
 def continue_save(urls_txt ,saved_txt):
-    # функция для продолжения закачки, принимает список ссылок на скачку сравнивает со спсоком уже сохраненных и возвращает разницу
+    """
+    Функция для продолжения закачки, принимает список ссылок на скачку, сравнивает со списком уже сохраненных и возвращает разницу в массиве
+    """
     link_list = []
     saved_list = []
     # подгружаем в массив ссылки с файла
@@ -136,6 +152,7 @@ def continue_save(urls_txt ,saved_txt):
 
 
 def save_images(images_links):
+    """Сохраняем картиночку по переданной ссылке"""
     print('Downloading...')
 
     os.system(r"explorer.exe" + " " + imgs_path)
@@ -161,13 +178,13 @@ def save_images(images_links):
 
         response = S.get(img_link, stream=True, headers=header)
         try:
-            save_path = imgs_path + '\\' + img_name + '.jpg'
+            save_path = imgs_path + '\\' + img_name + str(d.datetime.now())[-4:] + '.jpg'
             with open(save_path, "wb") as f:
                 response.decode_content = True
                 shutil.copyfileobj(response.raw, f)
         except OSError:
             img_name = check_filename(img_name)
-            save_path = imgs_path + '\\' + img_name + '.jpg'
+            save_path = imgs_path + '\\' + img_name + str(d.datetime.now())[-4:] + '.jpg'
             with open(save_path, "wb") as f:
                 response.decode_content = True
                 shutil.copyfileobj(response.raw, f)
@@ -187,12 +204,17 @@ def save_images(images_links):
 
 
 def extract_token(string):
-    # вытаскиваем из строки html значение токена авторизации с помощью регулярки
+    """
+    Вытаскиваем из строки html значение токена авторизации с помощью регулярки
+    """
     text = re.search(r'value=\".*?\"', string)
     result = str(text[0])[7:-1]
     return result
 
 def check_auth(auth, username):
+    """
+    Проверяем прошла ли авторизация на сайте
+    """
     soup = BeautifulSoup(auth.text, 'html5lib')
     for row in soup.header.find_all('a'):
         if str(row).startswith('<a class="user-link _1Zf8w _2dNZp" data-hook="user_link"'):
@@ -202,7 +224,9 @@ def check_auth(auth, username):
 
 
 def check_filename(filename):
-    # проверяем имя файла на наличие недопустимых для Windows символов
+    """
+    Проверяем имя файла на наличие недопустимых для Windows символов
+    """
     for i in list(filename):
         if str(i) in "/\\:;*?<>|":
             new_name = ''
@@ -215,7 +239,9 @@ def check_filename(filename):
     return filename
 
 def make_dirs():
-    # создаем путь к рабочей папке
+    """
+    Создаем путь к рабочей папке
+    """
     if not os.path.exists(alpha_dir):
         os.mkdir(alpha_dir)
 
@@ -241,8 +267,7 @@ if __name__ == "__main__":
 
     # dev_links = parse_deviant_links(key, pages, parametr, direct_url, S)
 
-
-    url_list_txt = 'D:\\Pictures\\2022-05-08_gb62da_pages_list.txt'
+    url_list_txt = 'D:\Pictures\gb62da_forbidden_list.txt'
     saved_list_txt = ''
     dev_links = continue_save(url_list_txt, saved_list_txt)
 

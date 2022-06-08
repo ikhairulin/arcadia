@@ -54,18 +54,20 @@ def cbr_to_list(cbr, alpha_dir):
 
 
     elif extension in ['.cbz', '.zip']:
+        print('Unpacking zip archive...')
         files_path = str(alpha_dir + 'temp_dir')
         with zipfile.ZipFile(cbr) as z:
             z.extractall(str(alpha_dir + 'temp_dir'))
-        print('Unpacking zip archive...')
+
 
 
     elif extension in ['.cbr', '.rar']:
+        print('Unpacking rar archive...')
         files_path = str(alpha_dir + 'temp_dir')
         rarfile.UNRAR_TOOL = UnRAR_path
         with rarfile.RarFile(cbr) as r:
             r.extractall(str(alpha_dir + 'temp_dir'))
-        print('Unpacking rar archive...')
+
 
 
     else:
@@ -100,7 +102,7 @@ def upload_imgs(filelist):
                 files={'file': ('file', f, 'image/jpg')}
                 ).json()
             upload_files.append(str(result_requests))
-        print('Upload', counter, 'file. Link -  https://telegra.ph/' + str(result_requests)[10:-3])
+        print('Upload', counter, 'file. Link -  https://telegra.ph' + str(result_requests)[10:-3])
         counter += 1
     return upload_files
 
@@ -147,7 +149,7 @@ def main(cbr, alpha_dir):
 if __name__ == '__main__':
 
     # путь к файлу-архиву или к папке с картиночками
-    cbr = "E:\Comics\Heavy Metal Magazine\Vampire Vixens of the Wehrmacht.cbr"
+    cbr = "E:\Comics\DC\Batman Universe\Harley Quinn\[Stepan Sejic] Harleen_001_2019.cbr"
 
     try:
         main(cbr, alpha_dir)

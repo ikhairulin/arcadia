@@ -3,3 +3,5 @@ cat .gitignore
 /backup
 
 /data/config.py
+
+/data/__pycache__

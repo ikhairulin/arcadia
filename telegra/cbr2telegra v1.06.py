@@ -83,7 +83,7 @@ def cbr_to_list(cbr, alpha_dir):
 def del_temp(alpha_dir):
     """Удаляет временные файлы с папкой после окончания закачки"""
     print('Deleting temp files...')
-    time.sleep(5)
+    time.sleep(10)
     shutil.rmtree(str(alpha_dir + 'temp_dir'))
 
 
@@ -143,13 +143,16 @@ def main(cbr, alpha_dir):
 
     html_string = prepare_string(upload_file_list)
 
+    with open(alpha_dir + 'temp_dir' + '\\' + 'html_string.txt', 'w', encoding='UTF-8') as saved_html:
+                saved_html.write(html_string)
+
     create_telegra_page(my_token, title, html_string)
 
 
 if __name__ == '__main__':
 
     # путь к файлу-архиву или к папке с картиночками
-    cbr = "E:\Comics\DC\Batman Universe\Harley Quinn\[Stepan Sejic] Harleen_001_2019.cbr"
+    cbr = "E:\Comics\DC\Batman Universe\Harley Quinn\[Stepan Sejic] Harleen_003_2019.cbr"
 
     try:
         main(cbr, alpha_dir)
@@ -158,4 +161,5 @@ if __name__ == '__main__':
 
     except Exception as ex:
         print("Error")
+
         print(ex)
